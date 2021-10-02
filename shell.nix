@@ -1,7 +1,8 @@
 let
   sources = import ./nix/sources.nix;
-  rustChannel = import ./nix/rust.nix { inherit sources; };
   pkgs = import sources.nixpkgs { };
+  rustChannel = import ./nix/rust.nix { inherit sources; };
+
   rust = rustChannel.rust.override {
     targets = [ ];
     extensions = [
@@ -11,6 +12,9 @@ let
       "rust-analysis"
     ];
   };
+
+  inherit (pkgs) lib stdenv;
+
 in
 pkgs.mkShell {
   buildInputs = [
@@ -18,5 +22,5 @@ pkgs.mkShell {
     pkgs.rust-analyzer
     pkgs.cargo-watch
     pkgs.clippy
-  ];
+  ] ++ lib.optionals stdenv.isDarwin [ pkgs.libiconv ];
 }
