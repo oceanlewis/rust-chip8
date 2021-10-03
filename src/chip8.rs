@@ -9,6 +9,7 @@ pub trait CHIP8 {
     const MEMORY_SIZE: usize = 0x1000;
     const SYSTEM_MEMORY_START: usize = 0x100;
     const SYSTEM_MEMORY_END: usize = 0x100;
+    const PROGRAM_MEMORY_START: usize = 0x101;
 
     /// Op Code: `0x8xyF`
     ///

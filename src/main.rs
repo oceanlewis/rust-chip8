@@ -3,12 +3,12 @@
 mod chip8;
 use chip8::{register_position, CHIP8};
 
-/// Describes the State of the CPU
-/// Setting the state to `Paused` will cause the run loop to exit
+/// Describes the execution statue of the CPU
+/// Setting the state to `Halted` will cause the run loop to exit
 #[derive(Debug, PartialEq)]
-enum CpuState {
+enum ExecutionState {
     Running,
-    Paused,
+    Halted,
 }
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ struct CPU {
     program_counter: u16,
     memory: [u8; 0x1000],
 
-    state: CpuState,
+    state: ExecutionState,
 }
 
 impl CPU {
@@ -35,14 +35,14 @@ impl CPU {
             program_counter: 0,
             memory: [0; 0x1000],
 
-            state: CpuState::Paused,
+            state: ExecutionState::Halted,
         }
     }
 
     pub fn run(&mut self) {
-        self.state = CpuState::Running;
+        self.state = ExecutionState::Running;
 
-        while self.state != CpuState::Paused {
+        while self.state != ExecutionState::Halted {
             self.step();
         }
     }
@@ -59,7 +59,7 @@ impl CPU {
         let nnn = opcode & 0x0FFF;
 
         match (c, x, y, d) {
-            (0, 0, 0, 0) => self.state = CpuState::Paused,
+            (0, 0, 0, 0) => self.state = ExecutionState::Halted,
             (0, 0, 0xE, 0xE) => self.ret(),
             (2, _, _, _) => self.call(nnn),
             (8, _, _, 4) => self.add(x, y),
@@ -67,10 +67,23 @@ impl CPU {
         }
     }
 
-    pub fn load_program(&mut self, location_in_memory: usize, program: &[u8]) {
+    pub fn load_program(&mut self, program: &[u8]) {
+        self.load_program_at(Self::PROGRAM_MEMORY_START, program);
+    }
+
+    pub fn load_program_at(
+        &mut self,
+        location_in_memory: usize,
+        program: &[u8],
+    ) {
         assert!(location_in_memory > Self::SYSTEM_MEMORY_END);
         self.memory[location_in_memory..(location_in_memory + program.len())]
             .copy_from_slice(&program);
+    }
+
+    pub fn run_program(&mut self) {
+        self.set_program_counter(CPU::PROGRAM_MEMORY_START);
+        self.run();
     }
 
     pub fn set_program_counter(&mut self, location_in_memory: usize) {
@@ -90,17 +103,12 @@ impl CPU {
         self.stack_pointer += 1;
         assert!(
             (self.stack_pointer as usize) < Self::STACK_SIZE,
-            "Stack overflow, SP:{:x}",
-            self.stack_pointer
+            "stack overflow",
         );
     }
 
     fn decrement_stack_counter(&mut self) {
-        assert!(
-            self.stack_pointer != 0,
-            "Stack underflow, SP:{:x}",
-            self.stack_pointer
-        );
+        assert!(self.stack_pointer != 0, "stack underflow",);
         self.stack_pointer -= 1;
     }
 
@@ -208,18 +216,18 @@ mod tests {
         use crate::*;
 
         #[test]
-        fn pauses_on_0000() {
+        fn halts_on_0000() {
             let mut cpu = CPU::new();
             cpu.run();
             assert_eq!(cpu.program_counter, 2);
         }
     }
 
-    mod functions_as_data {
+    mod load_program {
         use crate::*;
 
         #[test]
-        fn load_add_twice_program() {
+        fn add_twice() {
             let mut cpu = CPU::new();
             let add_twice = [
                 0x80, 0x14, // add(0, 1)
@@ -227,7 +235,7 @@ mod tests {
                 0x00, 0xEE, // ret()
             ];
 
-            cpu.load_program(0x101, &add_twice);
+            cpu.load_program(&add_twice);
 
             assert_eq!(
                 cpu.memory[0xFF..0x109],
@@ -252,9 +260,8 @@ mod tests {
                 0x20, 0x00, // call(0x000)
             ];
 
-            cpu.load_program(0x101, &simple_call);
-            cpu.set_program_counter(0x101);
-            cpu.run();
+            cpu.load_program(&simple_call);
+            cpu.run_program();
             assert_eq!(cpu.program_counter, 0x002);
         }
 
@@ -266,9 +273,8 @@ mod tests {
                 0x00, 0xEE, // ret()
             ];
 
-            cpu.load_program(0x101, &simply_return);
-            cpu.set_program_counter(0x101);
-            cpu.run();
+            cpu.load_program(&simply_return);
+            cpu.run_program();
         }
 
         #[test]
@@ -279,10 +285,40 @@ mod tests {
                 0x21, 0x01, // call(0x101)
             ];
 
-            cpu.load_program(0x101, &infinite_loop);
-            cpu.set_program_counter(0x101);
+            cpu.load_program(&infinite_loop);
 
-            cpu.run();
+            cpu.run_program();
+        }
+    }
+
+    mod sample_programs {
+        use crate::*;
+
+        #[test]
+        fn do_a_thing() {
+            let mut cpu = CPU::new();
+
+            cpu.registers[0] = 5;
+            cpu.registers[1] = 10;
+
+            cpu.load_program(&[
+                0x22, 0x00, // call(0x200)
+                0x22, 0x00, // call(0x200)
+                0x00, 0x00, // halt
+            ]);
+
+            cpu.load_program_at(
+                0x200,
+                &[
+                    0x80, 0x14, // add(...)
+                    0x80, 0x14, // add(...)
+                    0x00, 0xEE, // ret()
+                ],
+            );
+
+            cpu.run_program();
+
+            assert_eq!(cpu.registers[0], 45);
         }
     }
 }
