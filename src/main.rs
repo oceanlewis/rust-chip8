@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
+/// Defines the instruction set of the CHIP-8
 trait InstructionSet {
+    /// Adds the value contained in register `x` to the value contained in
+    /// register `y`, storing the result in register `x`.
     fn add(&mut self, x: u8, y: u8);
 }
 
