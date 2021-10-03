@@ -1,34 +1,7 @@
 #![allow(dead_code)]
 
-mod register_position {
-    /// The register position of the overflow flag
-    pub const OVERFLOW: usize = 15;
-}
-
-/// Defines the instruction set of the CHIP-8
-trait CHIP8 {
-    const STACK_SIZE: usize = 0x10;
-    const MEMORY_SIZE: usize = 0x1000;
-    const SYSTEM_MEMORY_START: usize = 0x100;
-    const SYSTEM_MEMORY_END: usize = 0x100;
-
-    /// Op Code: `0x8xyF`
-    ///
-    /// Adds the value contained in register `x` to the value contained in
-    /// register `y`, storing the result in register `x`.
-    fn add(&mut self, x: u8, y: u8);
-
-    /// Op Code: `0x2nnn`
-    ///
-    /// Sets the program counter to `nnn`.
-    fn call(&mut self, nnn: u16);
-
-    /// Op Code: `0x00EE`
-    ///
-    /// Sets the program counter to the memory address of the previous CALL
-    /// opcode;
-    fn ret(&mut self);
-}
+mod chip8;
+use chip8::{register_position, CHIP8};
 
 /// Describes the State of the CPU
 /// Setting the state to `Paused` will cause the run loop to exit
@@ -40,13 +13,13 @@ enum CpuState {
 
 #[derive(Debug)]
 struct CPU {
-    pub registers: [u8; 0x10],
+    registers: [u8; 0x10],
 
-    pub stack_pointer: u16,
-    pub stack: [u16; 0x10],
+    stack_pointer: u16,
+    stack: [u16; 0x10],
 
-    pub program_counter: u16,
-    pub memory: [u8; 0x1000],
+    program_counter: u16,
+    memory: [u8; 0x1000],
 
     state: CpuState,
 }
@@ -83,16 +56,13 @@ impl CPU {
         let y = ((opcode & 0x00F0) >> 4) as u8;
         let d = ((opcode & 0x000F) >> 0) as u8;
 
+        let nnn = opcode & 0x0FFF;
+
         match (c, x, y, d) {
             (0, 0, 0, 0) => self.state = CpuState::Paused,
-            (8, _, _, 4) => self.add(x, y),
-            (2, _, _, _) => self.call({
-                let n1 = (x as u16) << 8;
-                let n2 = (y as u16) << 4;
-                let n3 = (d as u16) << 0;
-                n1 | n2 | n3
-            }),
             (0, 0, 0xE, 0xE) => self.ret(),
+            (2, _, _, _) => self.call(nnn),
+            (8, _, _, 4) => self.add(x, y),
             _ => unimplemented!("Unimplemented opcode! '{}'", opcode),
         }
     }
@@ -274,6 +244,19 @@ mod tests {
 
     mod call {
         use crate::*;
+
+        #[test]
+        fn call_sets_program_counter() {
+            let mut cpu = CPU::new();
+            let simple_call = [
+                0x20, 0x00, // call(0x000)
+            ];
+
+            cpu.load_program(0x101, &simple_call);
+            cpu.set_program_counter(0x101);
+            cpu.run();
+            assert_eq!(cpu.program_counter, 0x002);
+        }
 
         #[test]
         #[should_panic]
