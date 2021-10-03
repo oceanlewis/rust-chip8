@@ -39,6 +39,11 @@ impl CPU {
         }
     }
 
+    pub fn run_program(&mut self) {
+        self.set_program_counter(CPU::PROGRAM_MEMORY_START);
+        self.run();
+    }
+
     pub fn run(&mut self) {
         self.state = ExecutionState::Running;
 
@@ -79,11 +84,6 @@ impl CPU {
         assert!(location_in_memory > Self::SYSTEM_MEMORY_END);
         self.memory[location_in_memory..(location_in_memory + program.len())]
             .copy_from_slice(&program);
-    }
-
-    pub fn run_program(&mut self) {
-        self.set_program_counter(CPU::PROGRAM_MEMORY_START);
-        self.run();
     }
 
     pub fn set_program_counter(&mut self, location_in_memory: usize) {
