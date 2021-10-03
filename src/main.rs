@@ -137,14 +137,14 @@ impl CHIP8 for CPU {
     }
 
     fn call(&mut self, nnn: u16) {
-        self.stack[self.stack_pointer as usize] = self.program_counter;
         self.increment_stack_counter();
+        self.stack[self.stack_pointer as usize] = self.program_counter;
         self.program_counter = nnn;
     }
 
     fn ret(&mut self) {
-        self.decrement_stack_counter();
         self.program_counter = self.stack[self.stack_pointer as usize];
+        self.decrement_stack_counter();
     }
 }
 
