@@ -41,10 +41,10 @@ impl CPU {
 
     pub fn run_program(&mut self) {
         self.set_program_counter(CPU::PROGRAM_MEMORY_START);
-        self.run();
+        self.continue_execution();
     }
 
-    pub fn run(&mut self) {
+    pub fn continue_execution(&mut self) {
         self.state = ExecutionState::Running;
 
         while self.state != ExecutionState::Halted {
@@ -218,7 +218,7 @@ mod tests {
         #[test]
         fn halts_on_0000() {
             let mut cpu = CPU::new();
-            cpu.run();
+            cpu.continue_execution();
             assert_eq!(cpu.program_counter, 2);
         }
     }
