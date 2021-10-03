@@ -238,9 +238,8 @@ mod tests {
             cpu.load_program(&add_twice);
 
             assert_eq!(
-                cpu.memory[0xFF..0x109],
+                cpu.memory[0x200..0x208],
                 [
-                    0x00, 0x00, // noop
                     0x80, 0x14, // add(0, 1)
                     0x80, 0x14, // add(0, 1)
                     0x00, 0xEE, // ret()
@@ -282,7 +281,7 @@ mod tests {
         fn stack_overflow() {
             let mut cpu = CPU::new();
             let infinite_loop = [
-                0x21, 0x01, // call(0x101)
+                0x22, 0x00, // call(0x101)
             ];
 
             cpu.load_program(&infinite_loop);
@@ -302,13 +301,13 @@ mod tests {
             cpu.registers[1] = 10;
 
             cpu.load_program(&[
-                0x22, 0x00, // call(0x200)
-                0x22, 0x00, // call(0x200)
+                0x23, 0x00, // call(0x300)
+                0x23, 0x00, // call(0x300)
                 0x00, 0x00, // halt
             ]);
 
             cpu.load_program_at(
-                0x200,
+                0x300,
                 &[
                     0x80, 0x14, // add(...)
                     0x80, 0x14, // add(...)

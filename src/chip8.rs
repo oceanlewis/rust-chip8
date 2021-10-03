@@ -7,9 +7,9 @@ pub mod register_position {
 pub trait CHIP8 {
     const STACK_SIZE: usize = 0x10;
     const MEMORY_SIZE: usize = 0x1000;
-    const SYSTEM_MEMORY_START: usize = 0x100;
-    const SYSTEM_MEMORY_END: usize = 0x100;
-    const PROGRAM_MEMORY_START: usize = 0x101;
+    const SYSTEM_MEMORY_START: usize = 0x0;
+    const SYSTEM_MEMORY_END: usize = 0x1FF;
+    const PROGRAM_MEMORY_START: usize = 0x200;
 
     /// Op Code: `0x8xyF`
     ///
